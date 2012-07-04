@@ -10,6 +10,7 @@ case object Leaf extends Hand
 case class HandNode (
   cards:         Vector[Card],
   shoe:          Shoe,
+  dealerCard:    Card,
   furtherAction: Boolean      = true,
   left:          Hand,
   right:         Hand         = Leaf,
@@ -18,7 +19,7 @@ case class HandNode (
   money:         Int
   )         extends Hand {
   
-  val score = {
+  lazy val score = {
     val rawScore = cards.map(_.value).sum
     val nAces = cards.count(_.rank == 1)
     val scores = (0 to nAces).map(rawScore - _*10)
@@ -41,8 +42,18 @@ case class HandNode (
   }
   
   def preorder: Result = {
+    val totalType = cards match {
+      case Vector(a, b) if a.rank == b.rank => TotalType.Pair
+    }
+    val query = Query(, dealerCard.rank)
+    val left = strategy.lookup(query)
+
     val lres = left match {
       case Leaf => Result(money, shoe)
+      case h: HandNode => h.preorder
+    }
+    val rres = right match {
+      case Leaf =>
     }
     
   }
