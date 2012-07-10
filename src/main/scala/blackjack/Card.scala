@@ -12,22 +12,26 @@ object Suit {
 }
 
 case class Card (rank: Int, suit: Suit) {
-  val (rankChar, value) = rank match {
-    case 1  => ('A', 11)
-    case 11 => ('J', 10)
-    case 12 => ('Q', 10)
-    case 13 => ('K', 10)
-    case y  => (y.toChar, y)
+  val value = rank match {
+    case 11 => 10
+    case 12 => 10
+    case 13 => 10
+    case y  => y
   }
+  val rankChar = Card.rankToChar(rank)
   override lazy val toString = rankChar + suit.toString
 }
 
 object Card {
   
-  def rankToChar(rank: Int) = rank match {
-    case x if x < 10 => (x + 48).toChar
-    case x if x < 14 => 'T'
-    case 14 => 'A'
-    case _ => throw new IllegalArgumentException("Rank must be 2-14")
-  }
+  val rankToChar = (1 to 13).zip((1 to 13).map {
+    case 1           => 'A'
+    case 10          => 'T'
+    case 11          => 'J'
+    case 12          => 'Q'
+    case 13          => 'K'
+    case x           => (x + 48).toChar // 48 is '0'.toInt
+  }).toMap
+  
+  val charToRank: Map[Char, Int] = rankToChar.toSeq.map(_.swap).toMap
 }

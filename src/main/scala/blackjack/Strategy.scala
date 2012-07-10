@@ -3,6 +3,15 @@ package blackjack
 object Action extends Enumeration {
   type Action = Value
   val Stand, Hit, Double, Split = Value
+  
+  def key(s: String) = s match {
+    case "S"  => Stand
+    case "H"  => Hit
+    case "SU" => Hit      // surrender if allowed
+    case "Dh" => Double   // if allowed, otherwise hit
+    case "Ds" => Double   // if allowed, otherwise stand
+    case "SP" => Split 
+  }
 }
 
 object TotalType extends Enumeration {
@@ -15,26 +24,26 @@ import TotalType._
 
 case class Query(cardsValue: Int, totalType: TotalType, dealerCardRank: Int)
 
-trait Strategy {
-  def lookup: Map[Query, Action]
+class Strategy (val lookup: Map[Query, Action])
+
+object Strategy {
+  
+  val BasicStrategy = load("src/main/resources/BasicStrategy.xml")
+  
+  def load(fileName: String): Strategy = {
+    val data = xml.XML.loadFile(fileName)
+    val xs = for {
+      hands @ <Strategy>{_*}</Strategy> <- data
+      hand                              <- hands.child
+      elem                              <- hand.child
+      if elem.label startsWith "action_"
+      playerHand = (hand \ "playerHand").text.toInt
+      dealerRank = Card.charToRank(elem.label.last)
+      totalType  = TotalType.withName((hand \ "totalType").text)
+      action     = key(elem.text)
+    } yield Query(playerHand, totalType, dealerRank) -> action
+    
+    new Strategy(xs.toMap)
+  }
+  
 }
-
-object BasicStrategy extends Strategy {
-  
-  private val data = xml.XML.loadFile("/resources/BasicStrategy.xml")
-
-  private val xs = for {
-    hands @ <Strategy>{_*}</Strategy> <- data
-    hand                              <- hands
-    elem                              <- hand.child
-    if elem.label startsWith "action_"
-    playerHand = (hand \ "playerHand").text.toInt
-    dealerRank = elem.label.last
-    totalType  = TotalType.withName((hand \ "totalType").text)
-    action     = Action.withName(elem.text)
-  } yield Query(playerHand, totalType, dealerRank) -> action
-  
-  val lookup = xs.toMap
-  
-}
-

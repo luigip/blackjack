@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Rules>
+	<ruleset name="Las Vegas Strip" 
+  DECKS_PER_SHOE="8" 
+  NEW_DECK_EACH_ROUND="N" 
+  DEALER_PEEKS="Y" 
+  HIT_SOFT_17="N" 
+  DOUBLE_AFTER_SPLIT="Y" 
+  MULTIPLE_SPLIT_ACES="Y" 
+  MULTIPLE_SPLITS="Y" 
+  ONE_CARD_TO_SPLIT_ACES="Y" 
+  BLACKJACK_PAYOUT="1.5" 
+  LATE_SURRENDER="Y"
+  />
+	<ruleset name="PKR" 
+  DECKS_PER_SHOE="8" 
+  NEW_DECK_EACH_ROUND="Y" 
+  DEALER_PEEKS="N" 
+  HIT_SOFT_17="N" 
+  DOUBLE_AFTER_SPLIT="Y" 
+  MULTIPLE_SPLIT_ACES="N" 
+  MULTIPLE_SPLITS="N" 
+  ONE_CARD_TO_SPLIT_ACES="Y" 
+  BLACKJACK_PAYOUT="1.5" 
+  LATE_SURRENDER="N"
+  />
+</Rules>

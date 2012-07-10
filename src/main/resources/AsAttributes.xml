@@ -1,19 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Strategy>
-	<cards value="20" c2="S" c3="S" c4="S" c5="S" c6="S" c7="S" c8="S" c9="S" cT="S" cA="S"/>
-	<cards value="19" c2="S" c3="S" c4="S" c5="S" c6="S" c7="S" c8="S" c9="S" cT="S" cA="S"/>
-	<cards value="18" c2="S" c3="S" c4="S" c5="S" c6="S" c7="S" c8="S" c9="S" cT="S" cA="S"/>
-	<cards value="17" c2="S" c3="S" c4="S" c5="S" c6="S" c7="S" c8="S" c9="S" cT="S" cA="S"/>
-	<cards value="16" c2="S" c3="S" c4="S" c5="S" c6="S" c7="H" c8="H" c9="SU" cT="SU" cA="SU"/>
-	<cards value="15" c2="S" c3="S" c4="S" c5="S" c6="S" c7="H" c8="H" c9="H" cT="SU" cA="H"/>
-	<cards value="14" c2="S" c3="S" c4="S" c5="S" c6="S" c7="H" c8="H" c9="H" cT="H" cA="H"/>
-	<cards value="13" c2="S" c3="S" c4="S" c5="S" c6="S" c7="H" c8="H" c9="H" cT="H" cA="H"/>
-	<cards value="12" c2="H" c3="H" c4="S" c5="S" c6="S" c7="H" c8="H" c9="H" cT="H" cA="H"/>
-	<cards value="11" c2="Dh" c3="Dh" c4="Dh" c5="Dh" c6="Dh" c7="Dh" c8="Dh" c9="Dh" cT="Dh" cA="H"/>
-	<cards value="10" c2="Dh" c3="Dh" c4="Dh" c5="Dh" c6="Dh" c7="Dh" c8="Dh" c9="Dh" cT="H" cA="H"/>
-	<cards value="9" c2="H" c3="Dh" c4="Dh" c5="Dh" c6="Dh" c7="H" c8="H" c9="H" cT="H" cA="H"/>
-	<cards value="8" c2="H" c3="H" c4="H" c5="H" c6="H" c7="H" c8="H" c9="H" cT="H" cA="H"/>
-	<cards value="7" c2="H" c3="H" c4="H" c5="H" c6="H" c7="H" c8="H" c9="H" cT="H" cA="H"/>
-	<cards value="6" c2="H" c3="H" c4="H" c5="H" c6="H" c7="H" c8="H" c9="H" cT="H" cA="H"/>
-	<cards value="5" c2="H" c3="H" c4="H" c5="H" c6="H" c7="H" c8="H" c9="H" cT="H" cA="H"/>
+	<cards value="20" r2="S" r3="S" r4="S" r5="S" r6="S" r7="S" r8="S" r9="S" rT="S" rA="S"/>
+	<cards value/>
 </Strategy>

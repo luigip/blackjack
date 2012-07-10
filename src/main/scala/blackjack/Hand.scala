@@ -8,24 +8,37 @@ sealed trait Hand
 case object Leaf extends Hand
 
 case class HandNode (
-  cards:         Vector[Card],
+  cards:         Seq[Card],
   shoe:          Shoe,
   dealerCard:    Card,
   furtherAction: Boolean      = true,
-  left:          Hand,
-  right:         Hand         = Leaf,
+//  left:          Hand,
+//  right:         Hand         = Leaf,
   strategy:      Strategy,
   stake:         Int,
   money:         Int
   )         extends Hand {
+
+  // Score counting Aces as 1
+  val rawScore = cards.map(_.value).sum
   
   lazy val score = {
-    val rawScore = cards.map(_.value).sum
     val nAces = cards.count(_.rank == 1)
-    val scores = (0 to nAces).map(rawScore - _*10)
+    val scores = (nAces to 0 by -1).map(rawScore + _*10)
     scores.find(_ <= 21).getOrElse(scores.last)
   }
 
+  def isSoft = {
+    val i = cards indexWhere (_.rank == 1)
+    i != -1 && rawScore <= 10
+  }
+
+  val totalType = cards match {
+    case Seq(a, b) if a.rank == b.rank => TotalType.Pair
+    case xs if isSoft                     => TotalType.Soft
+    case _                                => TotalType.Hard
+  }
+  
   def hit = {
     copy(cards :+ shoe.card)
   }
@@ -41,23 +54,45 @@ case class HandNode (
     copy(cards.updated(1, shoe.card))
   }
   
-  def preorder: Result = {
-    val totalType = cards match {
-      case Vector(a, b) if a.rank == b.rank => TotalType.Pair
-    }
-    val query = Query(, dealerCard.rank)
-    val left = strategy.lookup(query)
-
-    val lres = left match {
-      case Leaf => Result(money, shoe)
-      case h: HandNode => h.preorder
-    }
-    val rres = right match {
-      case Leaf =>
-    }
+  def traverse: Return = score match {
     
+    // Bust
+    case x if x > 21 => Return(Seq(Result(cards, stake)), Context(money, shoe))
+    // Not bust, check for correct action
+    // Dealer already checked for blackjack
+    case x =>    
+      val query = Query(x, totalType, dealerCard.rank)
+      val action = strategy.lookup(query)
+      
+      action match {
+
+        case Action.Hit    => copy(cards = cards :+ shoe.card, shoe = shoe.next).traverse
+
+        case Action.Stand  => Return(Seq(Result(cards, stake)), Context(money, shoe))
+
+        case Action.Double => Return(Seq(Result(cards :+ shoe.card, stake * 2)), Context(money - stake, shoe.next))
+
+        case Action.Split  => {
+          val left: Return = x match {
+            // A - A : only deal 1 card
+            case 2 => Return(Seq(Result(Seq(cards(0), shoe.card), stake)), Context(money, shoe.next))
+            // other pairs
+            case _ => copy(cards = Seq(cards(0), shoe.card), shoe = shoe.next).traverse
+          }
+          val right: Return = x match {
+            // A - A
+            case 2 => Return(Seq(Result(Seq(cards(1), left.context.shoe.card), stake)), Context(money, left.context.shoe.next))
+            // other pairs
+            case _ => copy(cards = Seq(cards(1), left.context.shoe.card), shoe = left.context.shoe.next).traverse
+          }
+          Return(left.results ++ right.results, right.context)
+        }
+      }
+
   }
   
 }
 
-case class Result(money: Int, shoe: Shoe)
+case class Return(results: Seq[Result], context: Context)
+case class Result(cards: Seq[Card], stake: Int)
+case class Context(money: Int, shoe: Shoe)
