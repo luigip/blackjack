@@ -12,8 +12,6 @@ case class HandNode (
   shoe:          Shoe,
   dealerCard:    Card,
   furtherAction: Boolean      = true,
-//  left:          Hand,
-//  right:         Hand         = Leaf,
   strategy:      Strategy,
   stake:         Int,
   money:         Int
@@ -22,7 +20,7 @@ case class HandNode (
   // Score counting Aces as 1
   val rawScore = cards.map(_.value).sum
   
-  lazy val score = {
+  val score = {
     val nAces = cards.count(_.rank == 1)
     val scores = (nAces to 0 by -1).map(rawScore + _*10)
     scores.find(_ <= 21).getOrElse(scores.last)
@@ -38,7 +36,7 @@ case class HandNode (
     case xs if isSoft                     => TotalType.Soft
     case _                                => TotalType.Hard
   }
-  
+  //TODO remove duplication from these methods with the traverse method
   def hit = {
     copy(cards :+ shoe.card)
   }

@@ -1,12 +1,10 @@
 package blackjack
 import util.Random.nextInt
 
-
 abstract class Shoe {
   def card: Card
   def next: Shoe
 }
-
 
 object Shoe {
   def newRandom: Shoe = RandomCards
