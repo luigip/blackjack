@@ -2,14 +2,14 @@ package blackjack
 
 object Action extends Enumeration {
   type Action = Value
-  val Stand, Hit, Double, Split = Value
+  val Stand, Hit, DoubleOrHit, DoubleOrStand, SurrenderOrHit, Split = Value
   
   def key(s: String) = s match {
     case "S"  => Stand
     case "H"  => Hit
     case "SU" => Hit      // surrender if allowed
-    case "Dh" => Double   // if allowed, otherwise hit
-    case "Ds" => Double   // if allowed, otherwise stand
+    case "Dh" => DoubleOrHit   // if allowed, otherwise hit
+    case "Ds" => DoubleOrStand   // if allowed, otherwise stand
     case "SP" => Split 
   }
 }

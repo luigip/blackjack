@@ -1,5 +1,5 @@
 package blackjack
-import util.Random.nextInt
+import util.Random
 
 abstract class Shoe {
   def card: Card
@@ -15,7 +15,7 @@ object Shoe {
   }
 
   case object RandomCards extends Shoe {
-    def card = Card(nextInt(13) + 1, Suit.random)
+    def card = Card(Random.nextInt(13) + 1, Suit.random)
     def next = this
   }
 
@@ -27,6 +27,11 @@ object Shoe {
     }
   }
 
+  case class TestDeck(ranks: Int *) extends Shoe {
+    val card = Card(ranks.head, S)
+    lazy val next = TestDeck(ranks.tail: _*)
+  }
+  
 }
 
 

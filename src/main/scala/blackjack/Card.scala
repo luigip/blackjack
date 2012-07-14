@@ -12,6 +12,7 @@ object Suit {
 }
 
 case class Card (rank: Int, suit: Suit) {
+  
   val value = rank match {
     case 11 => 10
     case 12 => 10
@@ -34,4 +35,6 @@ object Card {
   }).toMap
   
   val charToRank: Map[Char, Int] = rankToChar.toSeq.map(_.swap).toMap
+  
+  def apply(rank: Int): Card = apply(rank, S)
 }

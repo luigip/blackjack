@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Strategy>
+<Strategy xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 	<Hand>
 		<playerHand>20</playerHand>
 		<totalType>Hard</totalType>
@@ -330,6 +330,20 @@
 		<action_4>H</action_4>
 		<action_5>Dh</action_5>
 		<action_6>Dh</action_6>
+		<action_7>H</action_7>
+		<action_8>H</action_8>
+		<action_9>H</action_9>
+		<action_T>H</action_T>
+		<action_A>H</action_A>
+	</Hand>
+	<Hand>
+		<playerHand>12</playerHand>
+		<totalType>Soft</totalType>
+		<action_2>H</action_2>
+		<action_3>H</action_3>
+		<action_4>H</action_4>
+		<action_5>H</action_5>
+		<action_6>H</action_6>
 		<action_7>H</action_7>
 		<action_8>H</action_8>
 		<action_9>H</action_9>

@@ -5,92 +5,119 @@ package blackjack
  * The player's current money and the Shoe instance must be passed and returned
  */
 sealed trait Hand
-case object Leaf extends Hand
+//case object Leaf extends Hand
+case class Return(results: Seq[Result], context: Context)
+case class Result(cards: Seq[Card], stake: Int)
+case class Context(money: Int, shoe: Shoe)
 
 case class HandNode (
-  cards:         Seq[Card],
-  shoe:          Shoe,
-  dealerCard:    Card,
-  furtherAction: Boolean      = true,
-  strategy:      Strategy,
-  stake:         Int,
-  money:         Int
+  cards:           Seq[Card],
+  shoe:            Shoe,
+  dealerCard:      Card,
+  strategy:        Strategy   = Strategy.BasicStrategy,
+  rules:           Rules      = Rules.ruleSetsByName("Las Vegas Strip"),
+  stake:           Int        = 2,
+  money:           Int        = 10000,
+  doublingAllowed: Boolean    = true,
+  splittingAllowed:Boolean    = true,
+  furtherAction:   Boolean    = true
   )         extends Hand {
 
   // Score counting Aces as 1
   val rawScore = cards.map(_.value).sum
   
+  // Find maximum score
   val score = {
     val nAces = cards.count(_.rank == 1)
     val scores = (nAces to 0 by -1).map(rawScore + _*10)
     scores.find(_ <= 21).getOrElse(scores.last)
   }
 
-  def isSoft = {
-    val i = cards indexWhere (_.rank == 1)
-    i != -1 && rawScore <= 10
-  }
+  def isSoft = cards.exists(_.rank == 1) && rawScore <= 10
+  
 
   val totalType = cards match {
-    case Seq(a, b) if a.rank == b.rank => TotalType.Pair
+    case Seq(a, b) if a.rank == b.rank 
+      && splittingAllowed                 => TotalType.Pair
     case xs if isSoft                     => TotalType.Soft
     case _                                => TotalType.Hard
   }
-  //TODO remove duplication from these methods with the traverse method
-  def hit = {
-    copy(cards :+ shoe.card)
-  }
   
-  def stand = copy(furtherAction = false)
+  def dealCard = copy(cards = cards :+ shoe.card, shoe = shoe.next)
   
-  def double = {
-    copy(cards :+ shoe.card, stake = stake * 2, furtherAction = false)
-  }
+  def noMoreAction = Return(Seq(Result(cards, stake)), Context(money, shoe))
   
-  def split = {
-    val card2 = cards(1)
-    copy(cards.updated(1, shoe.card))
-  }
+  def split = copy(cards = Seq(cards(0), shoe.card),
+      shoe = shoe.next,
+      doublingAllowed = rules.DOUBLE_AFTER_SPLIT,
+      splittingAllowed = if (rawScore == 2) rules.MULTIPLE_SPLIT_ACES else rules.MULTIPLE_SPLITS
+    )
   
-  def traverse: Return = score match {
-    
-    // Bust
-    case x if x > 21 => Return(Seq(Result(cards, stake)), Context(money, shoe))
+  
+  def rightSplit(cont: Context) = copy(cards = Seq(cards(1), cont.shoe.card),
+                   shoe = cont.shoe.next,
+                   money = cont.money - stake,
+                   doublingAllowed = rules.DOUBLE_AFTER_SPLIT,
+                   splittingAllowed = if (rawScore == 2) rules.MULTIPLE_SPLIT_ACES else rules.MULTIPLE_SPLITS
+  )
+  
+  // In case of A-A, don't look up soft total of 12, but as 2
+  def lookUpScore = if (totalType == TotalType.Pair) rawScore else score
+  
+  def traverse: Return = lookUpScore match {
+
+    case x if furtherAction == false => noMoreAction
+    // Bust / always stick on 21
+    case x if x >= 21 => copy(furtherAction = false).traverse
     // Not bust, check for correct action
-    // Dealer already checked for blackjack
     case x =>    
-      val query = Query(x, totalType, dealerCard.rank)
+      val query = Query(x, totalType, dealerCard.value)
       val action = strategy.lookup(query)
       
       action match {
+        
+        // DOUBLE
+        case y if (y == Action.DoubleOrHit || y == Action.DoubleOrStand) 
+               && cards.size == 2 && doublingAllowed
+          => dealCard.copy( 
+                  stake = stake * 2, 
+                  money = money - stake, 
+                  furtherAction = false
+                 ).traverse
 
-        case Action.Hit    => copy(cards = cards :+ shoe.card, shoe = shoe.next).traverse
+        // HIT
+        case y if y == Action.Hit 
+               || y == Action.DoubleOrHit  
+          => dealCard.traverse
 
-        case Action.Stand  => Return(Seq(Result(cards, stake)), Context(money, shoe))
+        // STAND
+        case y if y == Action.Stand
+               || y == Action.DoubleOrStand 
+          => noMoreAction 
 
-        case Action.Double => Return(Seq(Result(cards :+ shoe.card, stake * 2)), Context(money - stake, shoe.next))
-
+        // SPLIT
         case Action.Split  => {
-          val left: Return = x match {
+          val left = x match {
             // A - A : only deal 1 card
-            case 2 => Return(Seq(Result(Seq(cards(0), shoe.card), stake)), Context(money, shoe.next))
+            case y if y == 2 && rules.ONE_CARD_TO_SPLIT_ACES => 
+              split.copy(furtherAction = false).traverse
             // other pairs
-            case _ => copy(cards = Seq(cards(0), shoe.card), shoe = shoe.next).traverse
+            case _ => split.traverse
           }
-          val right: Return = x match {
+          val right = x match {
             // A - A
-            case 2 => Return(Seq(Result(Seq(cards(1), left.context.shoe.card), stake)), Context(money, left.context.shoe.next))
+            case y if y == 2 && rules.ONE_CARD_TO_SPLIT_ACES => 
+              rightSplit(left.context).copy(furtherAction = false).traverse
             // other pairs
-            case _ => copy(cards = Seq(cards(1), left.context.shoe.card), shoe = left.context.shoe.next).traverse
+            case _ => rightSplit(left.context).traverse
           }
           Return(left.results ++ right.results, right.context)
         }
+
+        case _ => sys.error("Did not match on action")
       }
 
   }
   
 }
 
-case class Return(results: Seq[Result], context: Context)
-case class Result(cards: Seq[Card], stake: Int)
-case class Context(money: Int, shoe: Shoe)
