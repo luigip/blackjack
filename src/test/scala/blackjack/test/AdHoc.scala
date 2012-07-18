@@ -6,7 +6,13 @@ import blackjack._
 
 
 class AdHoc extends FunSuite with ShouldMatchers {
-  
+
+  // Rule sets
+  lazy val LVS   = Rules.ruleSetsByName("Las Vegas Strip")
+  lazy val PKR   = Rules.ruleSetsByName("PKR")
+  lazy val Test1 = Rules.ruleSetsByName("Test")
+  lazy val Test2 = Rules.ruleSetsByName("Test2")
+
   test("Shoes test") {
     val shoes = Array(
       Shoe.newRandom,
@@ -33,8 +39,7 @@ class AdHoc extends FunSuite with ShouldMatchers {
     import TotalType._
     val strat = Strategy.BasicStrategy
     
-    println("Strategy table size: " + strat.lookup.size)
-    
+    strat.lookup.size should equal(350)
     strat.lookup(Query(11, Hard, 5)) should equal(Action.DoubleOrHit)
     strat.lookup(Query(16, Soft, 7)) should equal(Action.Hit)
     
@@ -56,6 +61,9 @@ class AdHoc extends FunSuite with ShouldMatchers {
     lvsRules.NEW_DECK_EACH_ROUND should be(false)
     lvsRules.BLACKJACK_PAYOUT should equal(1.5) 
   }
+
+  implicit val rules = LVS
+  implicit val strat = Strategy.BasicStrategy
   
   test("Hit 3 times & Bust") {
     val shoe = Shoe.TestDeck(4, 5, 13, 8) 
@@ -154,16 +162,17 @@ class AdHoc extends FunSuite with ShouldMatchers {
   
   test("No multiple split") {
     val shoe = Shoe.TestDeck(9, 7, 9, 6, 3)
-    val h1 = HandNode (Seq(Card(9), Card(9)), shoe, Card(2), rules = Rules.ruleSetsByName("PKR"))
+    val h1 = HandNode (Seq(Card(9), Card(9)), shoe, Card(2)) (rules = PKR)
     h1.traverse should equal(Return(Seq(
       Result(Seq(Card(9), Card(9)), 2),
       Result(Seq(Card(9), Card(7)), 2)
     ), Context(9998, Shoe.TestDeck(9, 6, 3))))
   }
   
+  
   test("No double after splitting") {
     val shoe = Shoe.TestDeck(1, 6, 5, 13)
-    val h1 = HandNode (Seq(Card(7), Card(7)), shoe, Card(4), rules = Rules.ruleSetsByName("Test"))
+    val h1 = HandNode (Seq(Card(7), Card(7)), shoe, Card(4))(rules = Test1)
     h1.traverse should equal(Return(Seq(
       Result(Seq(Card(7), Card(1)), 2),
       Result(Seq(Card(7), Card(6)), 2)
@@ -172,7 +181,7 @@ class AdHoc extends FunSuite with ShouldMatchers {
 
   test("Muliple split Aces") {
     val shoe = Shoe.TestDeck(1, 6, 5, 1, 13, 9, 6, 3, 5, 13, 13)
-    val h1 = HandNode (Seq(Card(1), Card(1)), shoe, Card(4), rules = Rules.ruleSetsByName("Test"))
+    val h1 = HandNode (Seq(Card(1), Card(1)), shoe, Card(4))(rules = Test1)
     h1.traverse should equal(Return(Seq(
       Result(Seq(Card(1), Card(6), Card(5)), 2),
       Result(Seq(Card(1), Card(13)), 2),
@@ -192,7 +201,7 @@ class AdHoc extends FunSuite with ShouldMatchers {
 
   test("Allow muliple split Aces with one card to split Aces rule") {
     val shoe = Shoe.TestDeck(1, 6, 1, 13, 9, 6, 3, 5, 13, 13)
-    val h1 = HandNode (Seq(Card(1), Card(1)), shoe, Card(4), rules = Rules.ruleSetsByName("Test2"))
+    val h1 = HandNode (Seq(Card(1), Card(1)), shoe, Card(4))(rules = Test2)
     h1.traverse should equal(Return(Seq(
       Result(Seq(Card(1), Card(6)), 2),
       Result(Seq(Card(1), Card(13)), 2),

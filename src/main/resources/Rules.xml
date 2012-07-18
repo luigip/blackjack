@@ -10,6 +10,7 @@
              MULTIPLE_SPLITS="Y"
              ONE_CARD_TO_SPLIT_ACES="Y"
              BLACKJACK_PAYOUT="1.5"
+             EARLY_SURRENDER="N"
              LATE_SURRENDER="Y"
             />
     <ruleset name="PKR"
@@ -22,6 +23,7 @@
              MULTIPLE_SPLITS="N"
              ONE_CARD_TO_SPLIT_ACES="Y"
              BLACKJACK_PAYOUT="1.5"
+             EARLY_SURRENDER="N"
              LATE_SURRENDER="N"
             />
     <ruleset name="Test"
@@ -34,6 +36,7 @@
              MULTIPLE_SPLITS="Y"
              ONE_CARD_TO_SPLIT_ACES="N"
              BLACKJACK_PAYOUT="1.5"
+             EARLY_SURRENDER="N"
              LATE_SURRENDER="N"
             />
     <ruleset name="Test2"
@@ -46,6 +49,7 @@
              MULTIPLE_SPLITS="Y"
              ONE_CARD_TO_SPLIT_ACES="Y"
              BLACKJACK_PAYOUT="1.5"
+             EARLY_SURRENDER="N"
              LATE_SURRENDER="N"
             />    
 </Rules>

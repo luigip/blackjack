@@ -10,8 +10,61 @@ class Rules (
  ,val MULTIPLE_SPLITS        : Boolean
  ,val ONE_CARD_TO_SPLIT_ACES : Boolean
  ,val BLACKJACK_PAYOUT       : Double
+ ,val EARLY_SURRENDER        : Boolean
  ,val LATE_SURRENDER         : Boolean
-)
+) {
+  import Action._
+  
+  case class PermittedActions (
+    hand:           HandNode,
+    hasJustSplit:   Boolean,
+    hasJustDoubled: Boolean
+  ) {
+    
+    lazy val pairValue: Option[Int] = if (hand.cards.size == 2 && hand.cards(0).value == hand.cards(1).value) 
+                                        Some(hand.cards(0).value) 
+                                      else None 
+    
+    lazy val isAA = pairValue == Some(1)
+    lazy val firstCardAce = hand.cards(0).value == 1
+    
+    lazy val canHit: Boolean = 
+      // Total score
+      hand.score < 21 &&
+      // Hasn't just doubled (which means only 1 card is dealt)
+      ! hasJustDoubled &&
+      // Hasn't just split with AA where only one card allowed to be dealt to split Aces
+      ! (hasJustSplit && firstCardAce && ONE_CARD_TO_SPLIT_ACES)
+    
+    lazy val canSplit: Boolean = 
+      // Two cards of same rank
+      pairValue.isDefined &&
+      // Hasn't already split unless (multiple split are allowed, or is AA and multiple split aces allowed)
+      (! hasJustSplit || ( if (isAA) MULTIPLE_SPLIT_ACES else MULTIPLE_SPLITS ) ) 
+      
+    lazy val canDouble: Boolean = 
+      hand.score < 21 && ( 
+      if (hasJustSplit) 
+        if (firstCardAce)
+          ! ONE_CARD_TO_SPLIT_ACES && DOUBLE_AFTER_SPLIT
+        else
+          DOUBLE_AFTER_SPLIT
+      else hand.cards.size == 2)
+    
+    lazy val canSurrender: Boolean = 
+      hand.score < 21 && 
+      LATE_SURRENDER && 
+      hand.cards.size == 2 && 
+      ! hasJustSplit
+    
+    lazy val actions: Set[Action] = 
+      Set(canHit -> Hit, canSplit -> Split, canDouble -> DoubleDown, canSurrender -> Surrender).flatMap {
+      case (true, a) => Some(a)
+      case (false,_) => None
+    }
+    
+  }
+}
 
 object Rules {
   
@@ -38,8 +91,11 @@ object Rules {
       (rules \ "@MULTIPLE_SPLITS"       ).text.toBool,
       (rules \ "@ONE_CARD_TO_SPLIT_ACES").text.toBool,
       (rules \ "@BLACKJACK_PAYOUT"      ).text.toDouble,
+      (rules \ "@EARLY_SURRENDER"       ).text.toBool,
       (rules \ "@LATE_SURRENDER"        ).text.toBool
     )
     xs.toMap
   }
+  
+  
 }
