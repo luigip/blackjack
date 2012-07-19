@@ -13,6 +13,11 @@ class AdHoc extends FunSuite with ShouldMatchers {
   lazy val Test1 = Rules.ruleSetsByName("Test")
   lazy val Test2 = Rules.ruleSetsByName("Test2")
 
+  // Shorthand for card sequences
+  def cs(xs: Int*): Seq[Card] = xs map (Card(_))
+  // Shorthand for test deck
+  val td = Shoe.TestDeck 
+  
   test("Shoes test") {
     val shoes = Array(
       Shoe.newRandom,
@@ -43,16 +48,13 @@ class AdHoc extends FunSuite with ShouldMatchers {
     strat.lookup(Query(11, Hard, 5)) should equal(Action.DoubleOrHit)
     strat.lookup(Query(16, Soft, 7)) should equal(Action.Hit)
     
-    //test all possible combos are in map
+    // Test all possible combos are in map
     val qs = for {
       dealer <- 1 to 10
       (player, tt) <- (5 to 20).map(t => (t, Hard)) ++ (13 to 20).map(t => (t, Soft)) ++ (2 to 20 by 2).map(t => (t, Pair)) 
     } yield Query(player, tt, dealer)
     
     qs forall (strat.lookup.get(_).isDefined) should be(true)
-//    qs foreach {q => 
-//      println(q + " " + strat.lookup.get(q).isDefined)
-//    }
   }
   
   test("Rules loaded correctly") {
@@ -61,153 +63,173 @@ class AdHoc extends FunSuite with ShouldMatchers {
     lvsRules.NEW_DECK_EACH_ROUND should be(false)
     lvsRules.BLACKJACK_PAYOUT should equal(1.5) 
   }
-
+  
+  // Set default rules and strategy
   implicit val rules = LVS
   implicit val strat = Strategy.BasicStrategy
   
   test("Hit 3 times & Bust") {
-    val shoe = Shoe.TestDeck(4, 5, 13, 8) 
-    val h1 = HandNode (Seq(Card(2), Card(3)), shoe, Card(11))
+    val shoe = td(4, 5, 13, 8) 
+    val h1 = HandNode (cs(2, 3), shoe, Card(11))
+    val t = h1.traverse
+
     h1.score should equal(5)
-    h1.traverse should equal(Return(Seq(Result(Seq(Card(2), Card(3), Card(4), Card(5), Card(13)), 2)),
-                                    Context(10000, Shoe.TestDeck(8))))   
+    t(0) should have (
+      'cards (cs(2, 3, 4, 5, 13)),
+      'shoe (td(8)),
+      'dealerCard (Card(11)),
+      'stake (2),
+      'money (10000)
+    )
   }
   
   test("Hit and stand on 20") {
-    val shoe = Shoe.TestDeck(13, 5, 13, 8)
-    val h1 = HandNode (Seq(Card(2), Card(3)), shoe, Card(11))
-    h1.traverse should equal(Return(Seq(Result(Seq(Card(2), Card(3), Card(13), Card(5)), 2)),
-                                    Context(10000, Shoe.TestDeck(13, 8))))
+    val shoe = td(13, 5, 13, 8)
+    val t = HandNode (cs(2, 3), shoe, Card(11)).traverse
+    t(0) should have (
+      'cards (cs(2, 3, 13, 5)),
+      'shoe  (td(13, 8))
+    )
   }
   
   test("Stand on soft 18 vs 8") {
     val shoe = Shoe.TestDeck(13, 5, 13, 8)
-    val h1 = HandNode (Seq(Card(1), Card(7)), shoe, Card(8))
-    h1.traverse should equal(Return(Seq(Result(Seq(Card(1), Card(7)), 2)),
-                                    Context(10000, shoe)))
+    val t = HandNode (Seq(Card(1), Card(7)), shoe, Card(8)).traverse
+    t(0) should have (
+      'cards (cs(1, 7)),
+      'shoe  (td(13, 5, 13, 8))
+    )
   }
 
   test("Hit on soft 18 vs 9, stand hard 18") {
     val shoe = Shoe.TestDeck(13, 5, 13, 8)
-    val h1 = HandNode (Seq(Card(1), Card(7)), shoe, Card(9))
-    h1.traverse should equal(Return(Seq(Result(Seq(Card(1), Card(7), Card(13)), 2)),
-      Context(10000, Shoe.TestDeck(5, 13, 8))))
+    val t = HandNode (Seq(Card(1), Card(7)), shoe, Card(9)).traverse
+    t(0) should have (
+      'cards (cs(1, 7, 13)),
+      'shoe  (td(5, 13, 8))
+    )
   }
   
   test("Double on hard 10 vs 7") {
     val shoe = Shoe.TestDeck(3, 5, 13, 8)
-    val h1 = HandNode (Seq(Card(8), Card(2)), shoe, Card(7))
-    h1.traverse should equal(Return(Seq(Result(Seq(Card(8), Card(2), Card(3)), 4)),
-      Context(9998, Shoe.TestDeck(5, 13, 8))))    
+    val t = HandNode (Seq(Card(8), Card(2)), shoe, Card(7)).traverse
+    
+    t should have length (1)
+    t(0) should have (
+      'cards (Seq(Card(8), Card(2), Card(3))),
+      'shoe  (Shoe.TestDeck(5, 13, 8)),
+      'stake (4),
+      'money (9998),
+      'hasJustDoubled (true)
+    )
   }
   
   test("Double on soft 18 vs 4") {
     val shoe = Shoe.TestDeck(13, 5, 13, 8)
-    val h1 = HandNode (Seq(Card(1), Card(7)), shoe, Card(4))
-    h1.traverse should equal(Return(Seq(Result(Seq(Card(1), Card(7), Card(13)), 4)),
-      Context(9998, Shoe.TestDeck(5, 13, 8))))
+    val t = HandNode (Seq(Card(1), Card(7)), shoe, Card(4)).traverse
+    
+    t should equal(Seq(
+      HandNode(Seq(Card(1), Card(7), Card(13)), Shoe.TestDeck(5, 13, 8), Card(4), 4, 9998, hasJustDoubled = true)))
   }
 
   test("Stand with 3 card soft 18 vs 4") {
-    val shoe = Shoe.TestDeck(4, 5, 13, 8)
-    val h1 = HandNode (Seq(Card(1), Card(3)), shoe, Card(4))
-    h1.traverse should equal(Return(Seq(Result(Seq(Card(1), Card(3), Card(4)), 2)),
-      Context(10000, Shoe.TestDeck(5, 13, 8))))
+    val shoe = td(4, 5, 13, 8)
+    val t = HandNode (cs(1, 3), shoe, Card(4)).traverse
+    
+    t(0) should have ('cards (cs(1, 3, 4)), 'money (10000), 'shoe (td(5, 13, 8)) )
   }
 
   test("Hit on 3 card 10 vs 8") {
-    val shoe = Shoe.TestDeck(3, 5, 13, 8)
-    val h1 = HandNode (Seq(Card(3), Card(4)), shoe, Card(4))
-    h1.traverse should equal(Return(Seq(Result(Seq(Card(3), Card(4), Card(3), Card(5)), 2)),
-      Context(10000, Shoe.TestDeck(13, 8))))
+    val shoe = td(3, 5, 13, 8)
+    val h1 = HandNode (cs(3, 4), shoe, Card(4))
+    h1.traverse should equal(Seq(HandNode(
+      cs(3, 4, 3, 5), td(13, 8), Card(4))))
   }
 
   test("Split 9-9 vs 2") {
-    val shoe = Shoe.TestDeck(3, 5, 13, 8, 6, 3)
-    val h1 = HandNode (Seq(Card(9, S), Card(9, H)), shoe, Card(2))
-    h1.traverse should equal(Return(Seq(
-      Result(Seq(Card(9, S), Card(3), Card(5)), 2),
-      Result(Seq(Card(9, H), Card(13)), 2)
-    ), Context(9998, Shoe.TestDeck(8, 6, 3))))
+    val shoe = td(3, 5, 13, 8, 6, 3)
+    val t = HandNode (Seq(Card(9, S), Card(9, H)), shoe, Card(2)).traverse
+
+    t should have length (2)
+    t(0) should have ('cards (Seq(Card(9, S), Card(3), Card(5))) )
+    t(1) should have ('cards (Seq(Card(9, H), Card(13))), 
+      'money (9998), 'stake (2), 'shoe  (Shoe.TestDeck(8, 6, 3)) )
   }
   
   test("Stand on T-T") {
     val shoe = Shoe.TestDeck(3, 5, 13, 8, 6, 3)
-    val h1 = HandNode (Seq(Card(12), Card(11)), shoe, Card(1))
-    h1.traverse should equal(Return(Seq(
-      Result(Seq(Card(12), Card(11)), 2)
-    ), Context(10000, Shoe.TestDeck(3, 5, 13, 8, 6, 3))))      
+    val t = HandNode (cs(12, 11), shoe, Card(1)).traverse
+    t(0) should have (
+      'cards (cs(12, 11))
+    )  
   }
   
   test("Split multiple times") {
     val shoe = Shoe.TestDeck(9, 7, 9, 6, 3, 4, 9, 8, 1, 10)
-    val h1 = HandNode (Seq(Card(9), Card(9)), shoe, Card(2))
-    h1.traverse should equal(Return(Seq(
-      Result(Seq(Card(9), Card(7)), 2),
-      Result(Seq(Card(9), Card(6)), 2),
-      Result(Seq(Card(9), Card(3), Card(4)), 2),
-      Result(Seq(Card(9), Card(8)), 2),
-      Result(Seq(Card(9), Card(1)), 2)
-    ), Context(9992, Shoe.TestDeck(10))))    
+    val t = HandNode (Seq(Card(9), Card(9)), shoe, Card(2)).traverse
+    t.length should be (5)
+    t(0) should have ('cards (cs(9, 7)) )
+    t(1) should have ('cards (cs(9, 6)) )
+    t(2) should have ('cards (cs(9, 3, 4)) )
+    t(3) should have ('cards (cs(9, 8)) )
+    t(4) should have ('cards (cs(9, 1)), 'money (9992), 'shoe (td(10)) )     
   }
   
   test("Double after splitting") {
-    val shoe = Shoe.TestDeck(1, 6, 5, 13)
-    val h1 = HandNode (Seq(Card(7), Card(7)), shoe, Card(4))
-    h1.traverse should equal(Return(Seq(
-      Result(Seq(Card(7), Card(1), Card(6)), 4),
-      Result(Seq(Card(7), Card(5)), 2)
-    ), Context(9996, Shoe.TestDeck(13))))    
+    val shoe = td(1, 6, 5, 13)
+    val t = HandNode (cs(7, 7), shoe, Card(4)).traverse
+    t.length should be (2)
+    t(0) should have ('cards (cs(7, 1, 6)) )
+    t(1) should have ('cards (cs(7, 5)), 'money (9996), 'shoe (td(13)) )
   }
   
   test("No multiple split") {
-    val shoe = Shoe.TestDeck(9, 7, 9, 6, 3)
-    val h1 = HandNode (Seq(Card(9), Card(9)), shoe, Card(2)) (rules = PKR)
-    h1.traverse should equal(Return(Seq(
-      Result(Seq(Card(9), Card(9)), 2),
-      Result(Seq(Card(9), Card(7)), 2)
-    ), Context(9998, Shoe.TestDeck(9, 6, 3))))
+    val shoe = td(9, 7, 9, 6, 3)
+    val t = HandNode (cs(9,9), shoe, Card(2)) (rules = PKR) .traverse
+    
+    t should have length (2)
+    t(0) should have ('cards (cs(9, 9)))
+    t(1) should have ('cards (cs(9, 7)), 'money (9998), 'shoe (td(9, 6, 3)) )
   }
   
   
   test("No double after splitting") {
-    val shoe = Shoe.TestDeck(1, 6, 5, 13)
-    val h1 = HandNode (Seq(Card(7), Card(7)), shoe, Card(4))(rules = Test1)
-    h1.traverse should equal(Return(Seq(
-      Result(Seq(Card(7), Card(1)), 2),
-      Result(Seq(Card(7), Card(6)), 2)
-    ), Context(9998, Shoe.TestDeck(5, 13))))
+    val shoe = td(1, 6, 5, 13)
+    val t = HandNode (cs(7,7), shoe, Card(4))(rules = Test1).traverse
+
+    t should have length (2)
+    t(0) should have ('cards (cs(7, 1)))
+    t(1) should have ('cards (cs(7, 6)), 'money (9998), 'shoe (td(5, 13)) )
   }
 
   test("Muliple split Aces") {
     val shoe = Shoe.TestDeck(1, 6, 5, 1, 13, 9, 6, 3, 5, 13, 13)
-    val h1 = HandNode (Seq(Card(1), Card(1)), shoe, Card(4))(rules = Test1)
-    h1.traverse should equal(Return(Seq(
-      Result(Seq(Card(1), Card(6), Card(5)), 2),
-      Result(Seq(Card(1), Card(13)), 2),
-      Result(Seq(Card(1), Card(9)), 2),
-      Result(Seq(Card(1), Card(6), Card(3)), 2)
-    ), Context(9994, Shoe.TestDeck(5, 13, 13))))
+    val t = HandNode (Seq(Card(1), Card(1)), shoe, Card(4))(rules = Test1).traverse
+    
+    t should have length (4)
+    t(0) should have ('cards (cs(1, 6, 5)) )
+    t(1) should have ('cards (cs(1, 13)) )
+    t(2) should have ('cards (cs(1, 9)) )
+    t(3) should have ('cards (cs(1, 6, 3)), 'money (9994), 'shoe (td(5, 13, 13)) )
   }
   
   test("No muliple split Aces") {
-    val shoe = Shoe.TestDeck(1, 6, 5, 1, 13, 9, 6, 3, 5, 13, 13)
-    val h1 = HandNode (Seq(Card(1), Card(1)), shoe, Card(4))
-    h1.traverse should equal(Return(Seq(
-      Result(Seq(Card(1), Card(1)), 2),
-      Result(Seq(Card(1), Card(6)), 2)
-    ), Context(9998, Shoe.TestDeck(5, 1, 13, 9, 6, 3, 5, 13, 13))))
+    val shoe = td(1, 6, 5, 1, 13, 9, 6, 3, 5, 13, 13)
+    val t = HandNode (cs(1, 1), shoe, Card(4)).traverse
+    
+    t should have length (2)
+    t(0) should have ('cards (cs(1, 1)))
+    t(1) should have ('cards (cs(1, 6)), 'money (9998), 'shoe (td(5, 1, 13, 9, 6, 3, 5, 13, 13)) )    
   }
 
   test("Allow muliple split Aces with one card to split Aces rule") {
-    val shoe = Shoe.TestDeck(1, 6, 1, 13, 9, 6, 3, 5, 13, 13)
-    val h1 = HandNode (Seq(Card(1), Card(1)), shoe, Card(4))(rules = Test2)
-    h1.traverse should equal(Return(Seq(
-      Result(Seq(Card(1), Card(6)), 2),
-      Result(Seq(Card(1), Card(13)), 2),
-      Result(Seq(Card(1), Card(9)), 2),
-      Result(Seq(Card(1), Card(6)), 2)
-    ), Context(9994, Shoe.TestDeck(3, 5, 13, 13))))
+    val shoe = td(1, 6, 1, 13, 9, 6, 3, 5, 13, 13)
+    val t = HandNode (cs(1,1), shoe, Card(4))(rules = Test2).traverse
+    t should have length (4)
+    t(0) should have ('cards (cs(1, 6)) )
+    t(1) should have ('cards (cs(1, 13)) )
+    t(2) should have ('cards (cs(1, 9)) )
+    t(3) should have ('cards (cs(1, 6)), 'money (9994), 'shoe (td(3, 5, 13, 13)) )    
   }
 }
 

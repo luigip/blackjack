@@ -26,6 +26,10 @@ object Shoe {
       case _ => copy(cards = cards.tail)
     }
   }
+  
+  object NDeck {   
+    def apply(n: Int) = newNDeck(n)
+  }
 
   case class TestDeck(ranks: Int *) extends Shoe {
     val card = Card(ranks.head, S)

@@ -8,6 +8,21 @@ package blackjack
 import Action._
 
 sealed trait Hand
+
+trait HandScores {
+  def cards:           Seq[Card]
+  val rawScore = cards.map(_.value).sum
+  val aceCount = cards.count(_.rank == 1)
+  // Find maximum score
+  val score = {
+    val scores = (aceCount to 0 by -1).map(rawScore + _*10)
+    scores.find(_ <= 21).getOrElse(scores.last)
+  }
+  def isSoft = cards.exists(_.rank == 1) && rawScore <= 10
+  def isBust = score > 21
+  def isBlackjack = cards.size == 2 && score == 21
+}
+
 case class Return(results: Seq[Result], context: Context)
 case class Result(cards: Seq[Card], stake: Int)
 case class Context(money: Int, shoe: Shoe)
@@ -20,26 +35,11 @@ case class HandNode (
   money:           Int     = 10000,
   hasJustSplit:    Boolean = false,
   hasJustDoubled:  Boolean = false
-  ) 
-  (implicit val rules: Rules) 
-  extends Hand {
+  ) (implicit val rules: Rules) 
+  extends Hand with HandScores {
   
   lazy val permitted = rules.PermittedActions(this, hasJustSplit, hasJustDoubled)
-  
-  // Score counting Aces as 1
-  val rawScore = cards.map(_.value).sum
-
-  val aceCount = cards.count(_.rank == 1)
-  
-  // Find maximum score
-  val score = {
-    val scores = (aceCount to 0 by -1).map(rawScore + _*10)
-    scores.find(_ <= 21).getOrElse(scores.last)
-  }
-
-  def isSoft = cards.exists(_.rank == 1) && rawScore <= 10
-  
-
+   
   val totalType = cards match {
     case xs if permitted.canSplit         => TotalType.Pair
     case xs if isSoft                     => TotalType.Soft
@@ -48,7 +48,11 @@ case class HandNode (
   
   def deal = copy(cards = cards :+ shoe.card, shoe = shoe.next)
   
-  def noMoreAction = Return(Seq(Result(cards, stake)), Context(money, shoe))
+  // todo: simplify this and the test cases so that it just returns a Seq[HandNode]
+  // you can access the money / shoe from the last node
+  
+  def noMoreAction = Seq(this) 
+//    Return(Seq(Result(cards, stake)), Context(money, shoe))
   
   def split = copy( 
     cards = Seq(cards(0), shoe.card),
@@ -56,7 +60,7 @@ case class HandNode (
     hasJustSplit = true
   )
   
-  def rightSplit(cont: Context) = copy(
+  def rightSplit(cont: HandNode) = copy(
     cards = Seq(cards(1), cont.shoe.card),
     shoe = cont.shoe.next,
     money = cont.money - stake,
@@ -67,7 +71,7 @@ case class HandNode (
   def lookUpScore = if (permitted.canSplit && aceCount == 2) 2 else score
   
   // Automated traversal using a strategy
-  def traverse(implicit strategy: Strategy): Return = lookUpScore match {
+  def traverse(implicit strategy: Strategy): Seq[HandNode] = lookUpScore match {
 
     case x if permitted.actions.isEmpty => noMoreAction
 
@@ -93,11 +97,12 @@ case class HandNode (
         case y if y == Stand || y == DoubleOrStand => 
           noMoreAction 
 
-        // SPLIT
+        // SPLIT (canSplit is a sanity check)
         case Split if permitted.canSplit => {
           val left = split.traverse 
-          val right = rightSplit(left.context).traverse 
-          Return(left.results ++ right.results, right.context)
+          val right = rightSplit(left.last).traverse 
+//          Return(left.results ++ right.results, right.context)
+          left ++ right
         }
 
         case _ => sys.error("Did not match on action")
