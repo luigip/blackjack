@@ -141,9 +141,9 @@ class AdHoc extends FunSuite with ShouldMatchers {
 
   test("Hit on 3 card 10 vs 8") {
     val shoe = td(3, 5, 13, 8)
-    val h1 = HandNode (cs(3, 4), shoe, Card(4))
-    h1.traverse should equal(Seq(HandNode(
-      cs(3, 4, 3, 5), td(13, 8), Card(4))))
+    val t = HandNode (cs(3, 4), shoe, Card(4)).traverse
+    
+    t(0) should have ('cards (cs(3, 4, 3, 5)), 'shoe (td(13, 8)) )
   }
 
   test("Split 9-9 vs 2") {
