@@ -1,20 +1,21 @@
 package blackjack
 
+import Action._
+
 class Rules (
-  val DECKS_PER_SHOE         : Int
- ,val NEW_DECK_EACH_ROUND    : Boolean
- ,val DEALER_PEEKS           : Boolean
- ,val HIT_SOFT_17            : Boolean
- ,val DOUBLE_AFTER_SPLIT     : Boolean
- ,val MULTIPLE_SPLIT_ACES    : Boolean
- ,val MULTIPLE_SPLITS        : Boolean
- ,val ONE_CARD_TO_SPLIT_ACES : Boolean
- ,val BLACKJACK_PAYOUT       : Double
- ,val EARLY_SURRENDER        : Boolean
- ,val LATE_SURRENDER         : Boolean
-) {
-  import Action._
-  
+  val DECKS_PER_SHOE         : Int,
+  val NEW_DECK_EACH_ROUND    : Boolean,
+  val DEALER_PEEKS           : Boolean,
+  val HIT_SOFT_17            : Boolean,
+  val DOUBLE_AFTER_SPLIT     : Boolean,
+  val MULTIPLE_SPLIT_ACES    : Boolean,
+  val MULTIPLE_SPLITS        : Boolean,
+  val ONE_CARD_TO_SPLIT_ACES : Boolean,
+  val BLACKJACK_PAYOUT       : Double,
+  val EARLY_SURRENDER        : Boolean,
+  val LATE_SURRENDER         : Boolean
+  ) {
+
   case class PermittedActions (
     hand:           HandNode,
     hasJustSplit:   Boolean,
@@ -50,18 +51,21 @@ class Rules (
         else
           DOUBLE_AFTER_SPLIT
       else hand.cards.size == 2)
-    
+
+    // Note, EARLY surrender effectively occurs before hand starts, so not applicable here
     lazy val canSurrender: Boolean = 
       hand.score < 21 && 
       LATE_SURRENDER && 
-      hand.cards.size == 2 && 
+      hand.cards.size == 2 &&
+      // surrender only available as first action
       ! hasJustSplit
-    
+
+    // The set of available actions
     lazy val actions: Set[Action] = 
-      Set(canHit -> Hit, canSplit -> Split, canDouble -> DoubleDown, canSurrender -> Surrender).flatMap {
+      Seq(canHit -> Hit, canSplit -> Split, canDouble -> DoubleOrHit, canDouble -> DoubleOrStand, canSurrender -> Surrender).flatMap {
       case (true, a) => Some(a)
       case (false,_) => None
-    }
+    }.toSet + Stand
     
   }
 }

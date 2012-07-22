@@ -42,19 +42,20 @@ class AdHoc extends FunSuite with ShouldMatchers {
   
   test("Strategy loaded correctly") {
     import TotalType._
-    val strat = Strategy.BasicStrategy
-    
-    strat.lookup.size should equal(350)
-    strat.lookup(Query(11, Hard, 5)) should equal(Action.DoubleOrHit)
-    strat.lookup(Query(16, Soft, 7)) should equal(Action.Hit)
-    
+
+    val stratmap = Strategy.load("src/main/resources/BasicStrategy.xml")
+    stratmap.size should equal(350)
+    stratmap(Query(11, Hard, 5)) should equal(Action.DoubleOrHit)
+    stratmap(Query(16, Soft, 7)) should equal(Action.Hit)
     // Test all possible combos are in map
     val qs = for {
       dealer <- 1 to 10
       (player, tt) <- (5 to 20).map(t => (t, Hard)) ++ (13 to 20).map(t => (t, Soft)) ++ (2 to 20 by 2).map(t => (t, Pair)) 
     } yield Query(player, tt, dealer)
-    
-    qs forall (strat.lookup.get(_).isDefined) should be(true)
+    qs forall (stratmap.get(_).isDefined) should be(true)
+
+    val strat = Strategy.BasicStrategy
+    strat.action(HandNode(cs(1,5), td(1), Card(5))) should equal (Action.DoubleOrHit)
   }
   
   test("Rules loaded correctly") {
@@ -67,12 +68,12 @@ class AdHoc extends FunSuite with ShouldMatchers {
   // Set default rules and strategy
   implicit val rules = LVS
   implicit val strat = Strategy.BasicStrategy
+
   
   test("Hit 3 times & Bust") {
     val shoe = td(4, 5, 13, 8) 
     val h1 = HandNode (cs(2, 3), shoe, Card(11))
     val t = h1.traverse
-
     h1.score should equal(5)
     t(0) should have (
       'cards (cs(2, 3, 4, 5, 13)),
@@ -111,9 +112,8 @@ class AdHoc extends FunSuite with ShouldMatchers {
   }
   
   test("Double on hard 10 vs 7") {
-    val shoe = Shoe.TestDeck(3, 5, 13, 8)
-    val t = HandNode (Seq(Card(8), Card(2)), shoe, Card(7)).traverse
-    
+    val shoe = td(3, 5, 13, 8)
+    val t = HandNode (cs(8, 2), shoe, Card(7)).traverse
     t should have length (1)
     t(0) should have (
       'cards (Seq(Card(8), Card(2), Card(3))),
@@ -127,7 +127,6 @@ class AdHoc extends FunSuite with ShouldMatchers {
   test("Double on soft 18 vs 4") {
     val shoe = Shoe.TestDeck(13, 5, 13, 8)
     val t = HandNode (Seq(Card(1), Card(7)), shoe, Card(4)).traverse
-    
     t should equal(Seq(
       HandNode(Seq(Card(1), Card(7), Card(13)), Shoe.TestDeck(5, 13, 8), Card(4), 4, 9998, hasJustDoubled = true)))
   }
@@ -135,21 +134,18 @@ class AdHoc extends FunSuite with ShouldMatchers {
   test("Stand with 3 card soft 18 vs 4") {
     val shoe = td(4, 5, 13, 8)
     val t = HandNode (cs(1, 3), shoe, Card(4)).traverse
-    
     t(0) should have ('cards (cs(1, 3, 4)), 'money (10000), 'shoe (td(5, 13, 8)) )
   }
 
   test("Hit on 3 card 10 vs 8") {
     val shoe = td(3, 5, 13, 8)
     val t = HandNode (cs(3, 4), shoe, Card(4)).traverse
-    
     t(0) should have ('cards (cs(3, 4, 3, 5)), 'shoe (td(13, 8)) )
   }
 
   test("Split 9-9 vs 2") {
     val shoe = td(3, 5, 13, 8, 6, 3)
     val t = HandNode (Seq(Card(9, S), Card(9, H)), shoe, Card(2)).traverse
-
     t should have length (2)
     t(0) should have ('cards (Seq(Card(9, S), Card(3), Card(5))) )
     t(1) should have ('cards (Seq(Card(9, H), Card(13))), 
@@ -165,8 +161,8 @@ class AdHoc extends FunSuite with ShouldMatchers {
   }
   
   test("Split multiple times") {
-    val shoe = Shoe.TestDeck(9, 7, 9, 6, 3, 4, 9, 8, 1, 10)
-    val t = HandNode (Seq(Card(9), Card(9)), shoe, Card(2)).traverse
+    val shoe = td(9, 7, 9, 6, 3, 4, 9, 8, 1, 10)
+    val t = HandNode (cs(9, 9), shoe, Card(2)).traverse
     t.length should be (5)
     t(0) should have ('cards (cs(9, 7)) )
     t(1) should have ('cards (cs(9, 6)) )
@@ -186,7 +182,6 @@ class AdHoc extends FunSuite with ShouldMatchers {
   test("No multiple split") {
     val shoe = td(9, 7, 9, 6, 3)
     val t = HandNode (cs(9,9), shoe, Card(2)) (rules = PKR) .traverse
-    
     t should have length (2)
     t(0) should have ('cards (cs(9, 9)))
     t(1) should have ('cards (cs(9, 7)), 'money (9998), 'shoe (td(9, 6, 3)) )

@@ -1,37 +1,74 @@
 package blackjack
 
-object Action extends Enumeration {
-  type Action = Value
-  val Stand, Hit, DoubleOrHit, DoubleOrStand, DoubleDown, Surrender, SurrenderOrHit, Split = Value
-  
-  def key(s: String) = s match {
-    case "S"  => Stand
-    case "H"  => Hit
-    case "SU" => Hit            // surrender if allowed
-    case "Dh" => DoubleOrHit    // if allowed, otherwise hit
-    case "Ds" => DoubleOrStand  // if allowed, otherwise stand
-    case "SP" => Split 
-  }
-  
-}
 
-object TotalType extends Enumeration {
-  type TotalType = Value
-  val Hard, Soft, Pair = Value
-}
 
 import Action._
 import TotalType._
 
 case class Query(cardsValue: Int, totalType: TotalType, dealerCardRank: Int)
 
-class Strategy (val lookup: Map[Query, Action])
+class Strategy (strat: HandNode => Action) {
+
+  def action(hand: HandNode): Action = strat(hand)
+}
 
 object Strategy {
   
-  val BasicStrategy = load("src/main/resources/BasicStrategy.xml")
-  
-  def load(fileName: String): Strategy = {
+  val BasicStrategy = {
+    val map = load("src/main/resources/BasicStrategy.xml")
+    new Strategy ({ hand =>
+      import hand._
+      // In case of splittable A-A, don't look up soft total of 12, but as 2
+      val lookUpScore = if (permitted.canSplit && aceCount == 2) 2 else score
+
+      if (permitted.actions == Set(Stand)) Stand
+      else {
+        val query = Query(lookUpScore, totalType, dealerCard.value)
+        map(query)
+      }
+    })
+  }
+
+  val DealerStrategy = new Strategy ({ hand =>
+    import hand._
+    if (score < 17 || score == 17 && rules.HIT_SOFT_17)
+      Hit
+    else
+      Stand
+  })
+
+  val AskUserStrategy = new Strategy({ hand =>
+    import hand._
+    println("Cards: " + cards.mkString("["," ","]") + " Score: "+score)
+    if (isBust) { println("Player busts."); Stand }
+    else if (isBlackjack) { println("Blackjack!"); Stand}
+    else if (permitted.actions == Set(Stand)) {println("Player stands."); Stand}
+    else {
+      println("Permitted actions: " + permitted.actions.mkString(", "))
+      def act: Action = {
+        val a = try Action.key(readLine)
+        catch { case e =>
+          println(
+            """Valid inputs:
+              |    case "S"  => Stand
+              |    case "H"  => Hit
+              |    case "SU" => Hit
+              |    case "Dh" => DoubleOrHit
+              |    case "Ds" => DoubleOrStand
+              |    case "SP" => Split
+            """.stripMargin)
+          act
+        }
+        if (! permitted.actions.contains(a)) {
+          println("You can't do that!")
+          act
+        } else a
+      }
+      act
+    }
+  })
+
+  def load(fileName: String): Map[Query, Action] = {
     val data = xml.XML.loadFile(fileName)
     val xs = for {
       hands @ <Strategy>{_*}</Strategy> <- data
@@ -44,7 +81,7 @@ object Strategy {
       action     = key(elem.text)
     } yield Query(playerHand, totalType, dealerRank) -> action
     
-    new Strategy(xs.toMap)
+    xs.toMap
   }
   
 }
