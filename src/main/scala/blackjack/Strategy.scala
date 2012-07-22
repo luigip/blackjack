@@ -1,14 +1,11 @@
 package blackjack
 
-
-
 import Action._
 import TotalType._
 
 case class Query(cardsValue: Int, totalType: TotalType, dealerCardRank: Int)
 
 class Strategy (strat: HandNode => Action) {
-
   def action(hand: HandNode): Action = strat(hand)
 }
 
@@ -50,12 +47,11 @@ object Strategy {
         catch { case e =>
           println(
             """Valid inputs:
-              |    case "S"  => Stand
-              |    case "H"  => Hit
-              |    case "SU" => Hit
-              |    case "Dh" => DoubleOrHit
-              |    case "Ds" => DoubleOrStand
-              |    case "SP" => Split
+              |     "S"  => Stand
+              |     "H"  => Hit
+              |     "SU" => Surrender
+              |     "D"  => Double
+              |     "P"  => Split
             """.stripMargin)
           act
         }

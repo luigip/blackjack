@@ -61,7 +61,7 @@ case class HandNode (
     hasJustSplit = true
   )
 
-  // Automated traversal using a strategy
+  // Traversal using a Strategy (automated or not)
   def traverse(implicit strategy: Strategy): Seq[HandNode] = strategy.action(this) match {
         
         // DOUBLE

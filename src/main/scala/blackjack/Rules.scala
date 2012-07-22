@@ -72,14 +72,14 @@ class Rules (
 
 object Rules {
   
-  implicit def toBool(x: String) = new {
+  private implicit def toBool(x: String) = new {
     def toBool = x match {
       case "Y" => true
       case "N" => false
       case _ => x.toBoolean
     }
   }
-  
+  //to do: remove hard-coding filenames and put in implicit config class, vals loaded from XML
   val ruleSetsByName: Map[String, Rules] = {
     val data = xml.XML.loadFile("src/main/resources/Rules.xml")
     val xs = for {
@@ -100,6 +100,5 @@ object Rules {
     )
     xs.toMap
   }
-  
-  
+
 }

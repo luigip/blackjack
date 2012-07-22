@@ -36,8 +36,7 @@ object Main extends App {
       println("Dealer busts")
     } else println("Dealer sticks on " + dealer.score)
 
-    rs.foreach {
-      r =>
+    rs.foreach { r =>
         if (r.isBlackjack) Money +=
           (if (!dealer.isBlackjack)
             r.stake * (1 + rules.BLACKJACK_PAYOUT)
