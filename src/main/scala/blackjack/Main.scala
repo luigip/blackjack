@@ -23,7 +23,7 @@ object Main extends App {
     val c3 = it.next
     Money -= Stake
     val h = HandNode(Vector(c1, c3), it.shoe, c2, stake = Stake, money = Money)
-
+    
     println("Dealer showing: "+ c2)
     // AskUserStrategy lets us put our own moves in!
     // Remove this to use the implicit BasicStrategy
@@ -41,7 +41,7 @@ object Main extends App {
           (if (!dealer.isBlackjack)
             r.stake * (1 + rules.BLACKJACK_PAYOUT)
           else {println("Dealer blackjack, push");0}).toInt
-        else if (r.isBust) {}
+        else if (r.isBust || r.surrendered) {}
         else if (r.score == dealer.score) {println("Push."); Money += r.stake}
         else if (r.score > dealer.score || dealer.isBust) {println("You win!"); Money += r.stake * 2}
         else println("Dealer wins.")

@@ -53,6 +53,7 @@ class Rules (
       else hand.cards.size == 2)
 
     // Note, EARLY surrender effectively occurs before hand starts, so not applicable here
+    // LATE surrender is after dealer has peeked for blackjack
     lazy val canSurrender: Boolean = 
       hand.score < 21 && 
       LATE_SURRENDER && 
@@ -62,7 +63,8 @@ class Rules (
 
     // The set of available actions
     lazy val actions: Set[Action] = 
-      Seq(canHit -> Hit, canSplit -> Split, canDouble -> DoubleOrHit, canDouble -> DoubleOrStand, canSurrender -> Surrender).flatMap {
+      Seq(canHit -> Hit, canSplit -> Split, canDouble -> DoubleOrHit, canDouble -> DoubleOrStand, 
+          canSurrender -> SurrenderOrHit).flatMap {
       case (true, a) => Some(a)
       case (false,_) => None
     }.toSet + Stand

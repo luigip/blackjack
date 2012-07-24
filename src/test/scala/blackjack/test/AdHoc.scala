@@ -4,7 +4,6 @@ import org.scalatest.FunSuite
 import org.scalatest.matchers.ShouldMatchers
 import blackjack._
 
-
 class AdHoc extends FunSuite with ShouldMatchers {
 
   // Rule sets
@@ -191,7 +190,6 @@ class AdHoc extends FunSuite with ShouldMatchers {
   test("No double after splitting") {
     val shoe = td(1, 6, 5, 13)
     val t = HandNode (cs(7,7), shoe, Card(4))(rules = Test1).traverse
-
     t should have length (2)
     t(0) should have ('cards (cs(7, 1)))
     t(1) should have ('cards (cs(7, 6)), 'money (9998), 'shoe (td(5, 13)) )
@@ -199,8 +197,7 @@ class AdHoc extends FunSuite with ShouldMatchers {
 
   test("Muliple split Aces") {
     val shoe = Shoe.TestDeck(1, 6, 5, 1, 13, 9, 6, 3, 5, 13, 13)
-    val t = HandNode (Seq(Card(1), Card(1)), shoe, Card(4))(rules = Test1).traverse
-    
+    val t = HandNode (Seq(Card(1), Card(1)), shoe, Card(4))(rules = Test1).traverse 
     t should have length (4)
     t(0) should have ('cards (cs(1, 6, 5)) )
     t(1) should have ('cards (cs(1, 13)) )
@@ -210,8 +207,7 @@ class AdHoc extends FunSuite with ShouldMatchers {
   
   test("No muliple split Aces") {
     val shoe = td(1, 6, 5, 1, 13, 9, 6, 3, 5, 13, 13)
-    val t = HandNode (cs(1, 1), shoe, Card(4)).traverse
-    
+    val t = HandNode (cs(1, 1), shoe, Card(4)).traverse   
     t should have length (2)
     t(0) should have ('cards (cs(1, 1)))
     t(1) should have ('cards (cs(1, 6)), 'money (9998), 'shoe (td(5, 1, 13, 9, 6, 3, 5, 13, 13)) )    
@@ -225,6 +221,35 @@ class AdHoc extends FunSuite with ShouldMatchers {
     t(1) should have ('cards (cs(1, 13)) )
     t(2) should have ('cards (cs(1, 9)) )
     t(3) should have ('cards (cs(1, 6)), 'money (9994), 'shoe (td(3, 5, 13, 13)) )    
+  }
+  
+  test("Surrender on first action") {
+    val shoe = td(9, 7, 9, 6, 3)
+    val t = HandNode (cs(10, 6), shoe, Card(9), money = 10000, stake = 10).traverse
+    t(0) should have ('cards (cs(10, 6)), 'money (10005), 'surrendered (true),
+      'shoe (td(9, 7, 9, 6, 3)))
+  }
+
+  test("No surrender if against rules") {
+    val shoe = td(9, 7, 9, 6, 3)
+    val t = HandNode (cs(10, 6), shoe, Card(9), money = 10000, stake = 10)(rules = PKR).traverse
+    t(0) should have ('cards (cs(10, 6, 9)), 'money (10000), 'surrendered (false),
+      'shoe (td(7, 9, 6, 3)))
+  }  
+  
+  test("Can't surrender when already hit") {
+    val shoe = td(2, 3, 9, 6, 3)
+    val t = HandNode (cs(10, 4), shoe, Card(9), money = 10000, stake = 10).traverse
+    t(0) should have ('cards (cs(10, 4, 2, 3)), 'money (10000), 'surrendered (false),
+      'shoe (td(9, 6, 3)))
+  }
+  
+  test("Can't surrender after split") {
+    val shoe = td(7, 4, 5, 13, 1)
+    val t = HandNode (cs(9, 9), shoe, Card(9)).traverse
+    t.length should be (2)
+    t(0) should have ('cards (cs(9, 7, 4)), 'money (10000), 'stake(2), 'surrendered(false)  )
+    t(1) should have ('cards (cs(9, 5, 13)), 'money (9998), 'shoe (td(1)) ) 
   }
 }
 

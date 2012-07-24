@@ -43,15 +43,15 @@ object Strategy {
     else {
       println("Permitted actions: " + permitted.actions.mkString(", "))
       def act: Action = {
-        val a = try Action.key(readLine)
+        val a = try Action.userInputKey(readLine)
         catch { case e =>
           println(
-            """Valid inputs:
-              |     "S"  => Stand
-              |     "H"  => Hit
-              |     "SU" => Surrender
-              |     "D"  => Double
-              |     "P"  => Split
+            """Valid inputs (not case-sensitive):
+              |    case "S"        => Stand
+              |    case "H"        => Hit
+              |    case "SU" | "U" => SurrenderOrHit
+              |    case "SP" | "P" => Split
+              |    case "D"        => DoubleOrHit
             """.stripMargin)
           act
         }
