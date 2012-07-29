@@ -5,8 +5,9 @@ import Action._
 /**
  * Hand evaluation methods common to both player and dealer
  */
-trait HandScores {
+trait Hand {
   def cards:       Seq[Card]
+  def isBlackjack: Boolean
   lazy val rawScore = cards.map(_.value).sum
   lazy val aceCount = cards.count(_.rank == 1)
   lazy val score = {
@@ -15,7 +16,6 @@ trait HandScores {
   }
   lazy val isSoft = cards.exists(_.rank == 1) && rawScore <= 10
   lazy val isBust = score > 21
-//  lazy val isBlackjack = cards.size == 2 && score == 21 
 }
 
 /**
@@ -23,7 +23,7 @@ trait HandScores {
  * which form a binary tree. The traverse method uses a Strategy to form this tree,
  * returning a Seq of the terminal nodes
  */
-case class HandNode (
+case class PlayerHand (
   cards:              Seq[Card],
   shoe:               Shoe,
   dealerCard:         Card,
@@ -32,9 +32,7 @@ case class HandNode (
   hasJustSplit:       Boolean = false,
   hasJustDoubled:     Boolean = false,
   surrendered:        Boolean = false
-  ) (
-  implicit val rules: Rules
-  ) extends HandScores {
+  ) (implicit val rules: Rules) extends Hand {
   
   lazy val permitted = rules.PermittedActions(this, hasJustSplit, hasJustDoubled)
    
@@ -59,7 +57,7 @@ case class HandNode (
     hasJustSplit = true
   )
   
-  def rightSplit(cont: HandNode) = copy(
+  def rightSplit(cont: PlayerHand) = copy(
     cards = Seq(cards(1), cont.shoe.card),
     shoe = cont.shoe.next,
     money = cont.money - stake,
@@ -67,36 +65,58 @@ case class HandNode (
   )
 
   // Traversal using a Strategy (automated or not)
-  def traverse(implicit strategy: Strategy): Seq[HandNode] = strategy.action(this) match {
+  def traverse(implicit strategy: Strategy[PlayerHand]): Seq[PlayerHand] = strategy.action(this) match {
         
-        // DOUBLE
-        case DoubleOrHit | DoubleOrStand if permitted.canDouble   =>
-          deal.copy( 
-            stake = stake * 2, 
-            money = money - stake, 
-            hasJustDoubled = true
-          ).traverse
+    // DOUBLE
+    case DoubleOrHit | DoubleOrStand if permitted.canDouble   =>
+      deal.copy(
+        stake = stake * 2,
+        money = money - stake,
+        hasJustDoubled = true
+      ).traverse
 
-        // SURRENDER
-        case SurrenderOrHit if permitted.canSurrender   => surrender
-          
-        // HIT
-        case Hit | DoubleOrHit | SurrenderOrHit if permitted.canHit   => deal.traverse
+    // SURRENDER
+    case SurrenderOrHit if permitted.canSurrender   => surrender
 
-        // SPLIT
-        case Split if permitted.canSplit   => {
-          val left = split.traverse 
-          val right = rightSplit(left.last).traverse
-          left ++ right
-        }
+    // HIT
+    case Hit | DoubleOrHit | SurrenderOrHit if permitted.canHit   => deal.traverse
 
-        // STAND
-        case Stand | DoubleOrStand   => noMoreAction
+    // SPLIT
+    case Split if permitted.canSplit   => {
+      val left = split.traverse
+      val right = rightSplit(left.last).traverse
+      left ++ right
+    }
 
-        case _   => sys.error("Did not match on action")
-      }
+    // STAND
+    case Stand | DoubleOrStand   => noMoreAction
+
+    case _   => sys.error("Did not match on action")
+  }
 
 }
+
+case class DealerHand(
+  cards:              Seq[Card],
+  shoe:               Shoe,
+  strategy:           Strategy[DealerHand] = Strategy.DealerStrategy
+  ) (implicit val rules: Rules)
+  extends Hand {
+
+  lazy val isBlackjack = cards.size == 2 && score == 21
+
+  def deal = copy(cards :+ shoe.card, shoe.next)
+
+  def traverse: DealerHand = strategy.action(this) match {
+    // HIT
+    case Hit  => deal.traverse
+    // STAND
+    case Stand  => this
+
+    case _   => sys.error("Did not match on action")
+  }
+}
+
 
 object TotalType extends Enumeration {
   type TotalType = Value

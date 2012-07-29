@@ -6,7 +6,7 @@ package blackjack
 object Main extends App {
 
   implicit val rules = Rules.ruleSetsByName("Las Vegas Strip")
-  implicit val strategy = Strategy.BasicStrategy
+  implicit val playerStrategy = Strategy.BasicStrategy
   var Money = 1000
   val Stake = 2
 
@@ -22,7 +22,7 @@ object Main extends App {
     val c2 = it.next
     val c3 = it.next
     Money -= Stake
-    val h = HandNode(Vector(c1, c3), it.shoe, c2, stake = Stake, money = Money)
+    val h = PlayerHand(Vector(c1, c3), it.shoe, c2, stake = Stake, money = Money)
     
     println("Dealer showing: "+ c2)
     // AskUserStrategy lets us put our own moves in!
@@ -30,7 +30,7 @@ object Main extends App {
     val rs = h.traverse(Strategy.AskUserStrategy)
     Money = rs.last.money
 
-    val dealer = HandNode(Vector(c2), rs.last.shoe, null).traverse(Strategy.DealerStrategy).last
+    val dealer = DealerHand(Vector(c2), rs.last.shoe).traverse
     println("Dealer cards: " + dealer.cards.mkString("["," ","]"))
     if (dealer.isBust) {
       println("Dealer busts")

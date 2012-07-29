@@ -1,6 +1,6 @@
 package blackjack
 
-//case class Dealer(cards: Seq[Card], shoe: Shoe)(implicit rules: Rules) extends HandScores {
+//case class Dealer(cards: Seq[Card], shoe: Shoe)(implicit rules: Rules) extends Hand {
 //
 //  def deal = copy(cards = cards :+ shoe.card, shoe = shoe.next)
 //

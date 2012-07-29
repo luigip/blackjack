@@ -5,15 +5,15 @@ import TotalType._
 
 case class Query(cardsValue: Int, totalType: TotalType, dealerCardRank: Int)
 
-class Strategy (strat: HandNode => Action) {
-  def action(hand: HandNode): Action = strat(hand)
+class Strategy[T <: Hand] (strat: T => Action) {
+  def action(hand: T): Action = strat(hand)
 }
 
 object Strategy {
   
   val BasicStrategy = {
     val map = load("src/main/resources/BasicStrategy.xml")
-    new Strategy ({ hand =>
+    new Strategy[PlayerHand] ({ hand =>
       import hand._
       // In case of splittable A-A, don't look up soft total of 12, but as 2
       val lookUpScore = if (permitted.canSplit && aceCount == 2) 2 else score
@@ -26,7 +26,7 @@ object Strategy {
     })
   }
 
-  val DealerStrategy = new Strategy ({ hand =>
+  val DealerStrategy = new Strategy[DealerHand] ({ hand =>
     import hand._
     if (score < 17 || score == 17 && rules.HIT_SOFT_17)
       Hit
@@ -34,7 +34,7 @@ object Strategy {
       Stand
   })
 
-  val AskUserStrategy = new Strategy({ hand =>
+  val AskUserStrategy = new Strategy[PlayerHand]({ hand =>
     import hand._
     println("Cards: " + cards.mkString("["," ","]") + " Score: "+score)
     if (isBust) { println("Player busts."); Stand }

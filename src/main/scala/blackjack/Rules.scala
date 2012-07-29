@@ -16,8 +16,14 @@ class Rules (
   val LATE_SURRENDER         : Boolean
   ) {
 
+//  trait Permitted {
+//    def canHit: Boolean
+//    def canSplit: Boolean
+//    def
+//  }
+
   case class PermittedActions (
-    hand:           HandNode,
+    hand:           Hand,
     hasJustSplit:   Boolean,
     hasJustDoubled: Boolean
   ) {
